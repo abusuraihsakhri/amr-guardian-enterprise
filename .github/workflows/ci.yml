@@ -1,4 +1,4 @@
-name: Amr Guardian Enterprise CI/CD & Security Verification
+name: CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master, main ]
 
 jobs:
-  test-and-audit:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -24,17 +24,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install fastapi uvicorn pydantic pytest
+        pip install pytest
 
-    - name: Run Pytest Suite
+    - name: Run Test Suite
       run: |
         pytest -v
 
-    - name: Security SAST & Zero-PHI Audit
+    - name: Verify CLI Smoke Test
       run: |
-        python -c "
-        from agents.base import PHIGuard, AuditLogger
-        import pytest
-        assert AuditLogger.verify_integrity() is True
-        print('Security & Zero-PHI Audit Passed!')
-        "
+        python cli.py --audit --json
+        python cli.py --crcl 65 M 75 1.2
+        python cli.py --batch sample.csv out_smoke.csv
+

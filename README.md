@@ -1,132 +1,111 @@
-# Amr Guardian Enterprise
+# AMR Guardian Enterprise
 
-> **Domain:** Infectious Disease Surveillance & Microbiology  
-> **Reference Guidelines & Standards:** `CLSI M100, EUCAST & CDC NHSN Clinical Standards`
+A pure Python hospital-grade Antimicrobial Stewardship (ASP) decision support and antimicrobial resistance surveillance engine implementing:
+- **Bug-Drug In Vitro Resistance Mismatch Detection:** Flags active antibiotic orders with documented microbiological resistance (R) across blood and sterile-site isolates.
+- **Renal Dosing & Neurotoxicity Safety Engine:** Evaluates Cockcroft-Gault Creatinine Clearance ($\text{CrCl}$) using Devine Ideal Body Weight (IBW) and adjusted body weight adjustments, guarding against cefepime neurotoxicity, piperacillin/tazobactam overdosing, and vancomycin accumulation.
+- **De-escalation & Spectrum Optimization:** Identifies Day 2+ opportunities to narrow broad empiric anti-MRSA therapy (e.g. vancomycin $\rightarrow$ cefazolin/nafcillin upon confirmed MSSA bacteremia).
+- **Automated IV-to-PO Stepdown Protocol:** High-bioavailability oral conversion alerts (Levofloxacin, Metronidazole, Linezolid, Fluconazole) for hemodynamically stable patients tolerating oral intake.
+- **CDC / NHSN Antimicrobial Use (AU) Metrics:** Calculates Days of Therapy (DOT) per 1,000 patient-days and Standardized Antimicrobial Administration Ratio (SAAR) approximations.
+- **HIPAA Zero-PHI Interceptor & Cryptographic Audit Trail:** AST-level regex inspection and tamper-evident HMAC-SHA256 signed event chains.
+- **Batch CSV Cohort Processing:** High-throughput population-level surveillance across clinical wards and inpatient registries.
 
-<div align="center">
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
-
-</div>
+Requires Python standard library only (zero external runtime dependencies).
 
 ---
 
-## 📖 What It Does
+## Clinical Formulation & Pharmacokinetic Architecture
 
-**Amr Guardian Enterprise** is an advanced analytical and computational platform implementing In vitro resistance discordance worker, Day 2+ MSSA de-escalation from Vancomycin, dynamic CrCl renal dosing toxicity limits, NHSN AU/AR metrics. (13/13 tests passing).
+### Cockcroft-Gault Creatinine Clearance
+$$\text{CrCl (mL/min)} = \frac{(140 - \text{Age}) \times \text{Weight (kg)}}{72 \times \text{Serum Creatinine (mg/dL)}} \times (0.85 \text{ if Female})$$
 
-Stewardship decision-support enrichment features for amr-guardian-enterprise.
+### Dosing Weight Decision Rule
+- If $\text{Actual Weight} < \text{IBW}$, use Actual Weight.
+- If $\text{Actual Weight} > 1.2 \times \text{IBW}$, use Adjusted Body Weight:
+$$\text{AdjBW} = \text{IBW} + 0.4 \times (\text{Actual Weight} - \text{IBW})$$
 
-Implements three high-impact items from specifications:
-
-1. Antibiotic spectrum optimization engine
-   Ranks empiric agents by coverage match against suspected organisms for the
-   infection site, penalizing unnecessary broad-spectrum exposure and
-   incorporating local antibiogram resistance rates.
-
-2. Automated IV-to-PO conversion alerts
-   Criteria-based oral-switch eligibility using bioequivalence classes
-   (fluoroquinolones/linezolid/metronidazole/TMP-SMX reach near-IV exposure).
-
-3. De-escalation opportunity detector
-   Cross-references the active regimen with final culture susceptibilities to
-   find narrow-spectrum switches and bug-drug mismatches.
-
-Author: Dr. Abu Suraih Sakhri
-License: MIT
+### NHSN Antimicrobial Use Rate
+$$\text{DOT Rate} = \frac{\text{Total Days of Therapy (DOT)}}{\text{Monitored Patient-Days}} \times 1,000$$
 
 ---
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+## Features
 
-### 🔬 Core Algorithmic & Evaluation Engines
-
-- **`AlertSeverity`** — dedicated module for alert severity evaluation and state verification.
-- **`AlertCategory`** — dedicated module for alert category evaluation and state verification.
-- **`Susceptibility`** — dedicated module for susceptibility evaluation and state verification.
-- **`CultureIsolate`** — dedicated module for culture isolate evaluation and state verification.
-- **`MedicationOrder`** — dedicated module for medication order evaluation and state verification.
-- **`Patient`** — dedicated module for patient evaluation and state verification.
+- **CLSI M100 & EUCAST Alignment:** Validates microbiological susceptibility reporting and discordant therapy.
+- **Neurotoxicity & Nephrotoxicity Guardrails:** Enforces maximum safe daily doses under renal impairment (e.g., Cefepime max 2g q12h for $\text{CrCl} \le 50\text{ mL/min}$).
+- **Surveillance Population Auditing:** Aggregates alerts across ICU and ward cohorts into prioritized clinical queues.
+- **Batch CSV Processing:** High-throughput evaluation of hospital admission files.
 
 ---
 
-## 📐 Mathematical Formulation & Logic
+## Installation & Requirements
 
-```text
-  TOXICITY_RISK = "TOXICITY_RISK"
-  """Calculates Devine Ideal Body Weight in kg."""
-  """Calculates Adjusted Body Weight if actual weight > 1.2 * IBW."""
-  Formula: CrCl = [(140 - Age) * Weight / (72 * SCr)] * (0.85 if Female)
-  ibw = calculate_ibw(gender, height_cm) if height_cm else weight_kg
-```
+- Python 3.10+ (tested on 3.10, 3.11, 3.12)
+- Zero external runtime dependencies. `pytest` is optional for running tests.
 
----
-
-## 💻 CLI Quickstart & Usage
-
-### 1. Guided Interactive Mode
 ```bash
-python cli.py
+git clone https://github.com/abusuraihsakhri/amr-guardian-enterprise.git
+cd amr-guardian-enterprise
 ```
 
-### 2. Direct Parameterized Evaluation
+---
+
+## CLI Usage
+
+### 1. Surveillance Audit on Benchmark Inpatient Population
 ```bash
-python cli.py --- <value> --audit <value> --interactive <value> --json <value>
+python cli.py --audit --json
 ```
 
-### Parameter Reference
-- `---`: Specifies input measurement or parameter value.
-- `--audit`: Specifies input measurement or parameter value.
-- `--interactive`: Specifies input measurement or parameter value.
-- `--json`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
-- `--crcl`: Specifies input measurement or parameter value.
+### 2. Cockcroft-Gault Creatinine Clearance Calculator
+```bash
+python cli.py --crcl 68 M 75.0 2.4 175.0
+```
 
-### Input Data Schema
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `suite_name` | Parameter / observation metric | Required |
-| `system_slug` | Parameter / observation metric | Required |
-| `standard_reference` | Parameter / observation metric | Required |
-| `test_cases` | Parameter / observation metric | Required |
+### 3. Batch CSV Patient Cohort Evaluation
+```bash
+python cli.py --batch sample.csv results.csv
+```
 
 ---
 
-## 🛡️ Security & Enterprise Architecture
+## Python API Quickstart
 
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+```python
+from amr_guardian_enterprise import (
+    AMRGuardianEnterprise,
+    Patient,
+    MedicationOrder,
+    CultureIsolate,
+)
+
+# 1. Initialize Engine
+guardian = AMRGuardianEnterprise()
+
+# 2. Build Inpatient Case
+patient = Patient(
+    patient_id="PT-2026-01",
+    age=68,
+    gender="Male",
+    weight_kg=75.0,
+    serum_creatinine=2.4,
+    orders=[
+        MedicationOrder("ORD-1", "PT-2026-01", "Cefepime", dose_mg=2000.0, interval_hours=8)
+    ]
+)
+
+# 3. Evaluate Alerts
+alerts = guardian.audit_patient(patient)
+for a in alerts:
+    print(f"[{a.severity.value}] {a.title}: {a.recommendation}")
+```
 
 ---
 
-## 🧪 Testing & Verification
+## Running Tests
 
-Run the automated test suite:
+Run the test suite using standard `unittest` or `pytest`:
 
 ```bash
 pytest -v
 ```
 
-Execute high-throughput batch simulation benchmarks:
-
-```bash
-python simulator.py --tasks 1000 --concurrency 8
-```
-
----
-
-## 🐳 Container Deployment
-
-```bash
-docker build -t amr-guardian-enterprise .
-docker run -p 8000:8000 amr-guardian-enterprise
-```

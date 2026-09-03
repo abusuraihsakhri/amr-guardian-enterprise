@@ -1,0 +1,4 @@
+patient_id,age,gender,weight,scr
+PT-001,68,Male,75.0,2.4
+PT-002,72,Female,62.0,1.1
+PT-003,45,Male,80.0,0.9
